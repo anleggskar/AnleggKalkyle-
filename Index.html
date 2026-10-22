@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17251f">
+<title>AnleggKalkyle</title>
+<style>
+:root{font-family:Arial,sans-serif;color:#202b27;background:#f3f5f2}
+*{box-sizing:border-box}
+body{margin:0}
+header{background:#17251f;color:white;padding:22px 18px}
+header h1{margin:0;font-size:25px}
+header p{margin:7px 0 0;color:#c8d6cd}
+main{max-width:1000px;margin:auto;padding:16px}
+nav{display:flex;gap:8px;overflow:auto;margin-bottom:18px}
+nav button{white-space:nowrap;border:1px solid #d4ddd6;background:white;padding:12px 15px;border-radius:9px;font-weight:bold}
+nav button.active{background:#245b43;color:white;border-color:#245b43}
+.panel{background:white;border:1px solid #e0e6e0;border-radius:13px;padding:17px;margin-bottom:15px}
+h2{font-size:19px;margin:0 0 14px}
+h3{font-size:15px;margin:18px 0 10px}
+label{display:block;font-size:13px;font-weight:bold;margin-bottom:6px}
+input,select{width:100%;min-width:0;border:1px solid #ccd5ce;border-radius:8px;padding:11px;font-size:16px;background:white;color:#202b27}
+.field{min-width:0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+button{cursor:pointer}
+.primary,.secondary,.danger{border:0;border-radius:8px;padding:12px 15px;font-size:15px;font-weight:bold}
+.primary{background:#245b43;color:white}
+.secondary{background:#e8eee9;color:#234b37}
+.danger{background:#fae8e5;color:#8a2e22}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.statgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{padding:14px;background:#f0f5f0;border-radius:10px;min-width:0}
+.stat span{display:block;color:#53635a;font-size:12px;margin-bottom:8px}
+.stat strong{font-size:clamp(16px,3vw,22px);overflow-wrap:anywhere}
+.line{border-top:1px solid #e5e9e5;padding:14px 0}
+.linehead{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+.linehead strong{overflow-wrap:anywhere}
+.total{font-size:24px;font-weight:bold}
+.note{font-size:12px;color:#66756c;line-height:1.5}
+.hidden{display:none!important}
+table{width:100%;border-collapse:collapse}
+td,th{text-align:left;padding:9px 5px;border-bottom:1px solid #e5e9e5;font-size:13px}
+.right{text-align:right}
+footer{text-align:center;color:#6c796f;font-size:12px;padding:12px 0 28px}
+@media(max-width:560px){
+ .grid3{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .statgrid{grid-template-columns:1fr}
+ .stat{display:flex;align-items:center;justify-content:space-between;gap:8px}
+ .stat span{margin:0}
+ main{padding:12px}
+ .panel{padding:14px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏗️ AnleggKalkyle</h1>
+  <p>Kalkulasjon for anlegg, grunnarbeid og VA</p>
+</header>
+<main>
+  <div class="panel">
+    <div class="grid">
+      <div class="field">
+        <label for="project">Prosjektnavn</label>
+        <input id="project" placeholder="F.eks. Grøft i sentrum">
+      </div>
+      <div class="field">
+        <label for="customer">Kunde</label>
+        <input id="customer" placeholder="Kundenavn">
+      </div>
+    </div>
+  </div>
+
+  <nav>
+    <button class="active" data-tab="cost">Kalkyle</button>
+    <button data-tab="va">VA-grøft</button>
+    <button data-tab="summary">Oppsummering</button>
+  </nav>
+
+  <section id="cost">
+    <div class="panel">
+      <h2>Kostnadsposter</h2>
+      <p class="note">Legg inn antall, enhet og kostpris. Beløpene er ekskl. mva.</p>
+      <div id="lines"></div>
+      <div class="actions">
+        <button class="primary" id="add">+ Legg til post</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Påslag og salgspris</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="markup">Påslag på kostnad (%)</label>
+          <input id="markup" type="number" min="0" step="0.1" value="15">
+        </div>
+        <div class="field">
+          <label for="vat">Mva (%)</label>
+          <input id="vat" type="number" min="0" step="1" value="25">
+        </div>
+      </div>
+      <div class="statgrid" style="margin-top:15px">
+        <div class="stat"><span>Selvkost</span><strong id="costTotal">0 kr</strong></div>
+        <div class="stat"><span>Salgspris eks. mva.</span><strong id="sellTotal">0 kr</strong></div>
+        <div class="stat"><span>Fortjeneste</span><strong id="profitTotal">0 kr</strong></div>
+      </div>
+      <p class="note" id="marginInfo"></p>
+    </div>
+  </section>
+
+  <section id="va" class="hidden">
+    <div class="panel">
+      <h2>VA – grøfteberegning</h2>
+      <p class="note">Beregner et teoretisk trapesformet grøftetverrsnitt. Mål må kontrolleres mot prosjektets tegninger og gjeldende krav.</p>
+      <div class="grid">
+        <div class="field"><label for="length">Grøftelengde (m)</label><input id="length" type="number" min="0" step="0.1" value="100"></div>
+        <div class="field"><label for="depth">Gjennomsnittlig dybde (m)</label><input id="depth" type="number" min="0" step="0.01" value="2"></div>
+        <div class="field"><label for="bottom">Bredde i bunn (m)</label><input id="bottom" type="number" min="0" step="0.01" value="0.8"></div>
+        <div class="field"><label for="top">Bredde i topp (m)</label><input id="top" type="number" min="0" step="0.01" value="2"></div>
+        <div class="field"><label for="pipe">Rørdiameter (mm)</label><input id="pipe" type="number" min="0" step="1" value="160"></div>
+        <div class="field"><label for="fall">Rørfall (‰)</label><input id="fall" type="number" step="0.1" value="10"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Resultat</h2>
+      <div class="statgrid">
+        <div class="stat"><span>Grøfteareal</span><strong id="area">0 m²</strong></div>
+        <div class="stat"><span>Teoretisk utgraving</span><strong id="volume">0 m³</strong></div>
+        <div class="stat"><span>Høydeforskjell ved rørfall</span><strong id="drop">0 m</strong></div>
+      </div>
+      <h3>Valgfri enhetspris</h3>
+      <div class="grid">
+        <div class="field"><label for="excPrice">Utgraving (kr/m³)</label><input id="excPrice" type="number" min="0" value="180"></div>
+        <div class="field"><label for="extra">Andre grøftekostnader (kr/m)</label><input id="extra" type="number" min="0" value="500"></div>
+      </div>
+      <div class="statgrid" style="margin-top:15px">
+        <div class="stat"><span>Utgravingskostnad</span><strong id="excCost">0 kr</strong></div>
+        <div class="stat"><span>Andre kostnader</span><strong id="extraCost">0 kr</strong></div>
+        <div class="stat"><span>Sum grøft</span><strong id="vaCost">0 kr</strong></div>
+      </div>
+      <div class="actions"><button class="primary" id="addVA">+ Legg grøft inn i kalkylen</button></div>
+      <p class="note">Beregningen inkluderer ikke automatisk grøftekasse, massenes svelling, overbredde, fundament, omfylling, gjenfylling, grunnvann eller sikring. Disse må vurderes separat.</p>
+    </div>
+  </section>
+
+  <section id="summary" class="hidden">
+    <div class="panel">
+      <h2>Prosjektoppsummering</h2>
+      <p><strong>Prosjekt:</strong> <span id="sProject">Ikke angitt</span></p>
+      <p><strong>Kunde:</strong> <span id="sCustomer">Ikke angitt</span></p>
+      <div class="statgrid">
+        <div class="stat"><span>Selvkost</span><strong id="sCost">0 kr</strong></div>
+        <div class="stat"><span>Salgspris eks. mva.</span><strong id="sSell">0 kr</strong></div>
+        <div class="stat"><span>Salgspris inkl. mva.</span><strong id="sIncl">0 kr</strong></div>
+      </div>
+      <h3>Poster</h3>
+      <div style="overflow-x:auto">
+        <table><thead><tr><th>Post</th><th class="right">Antall</th><th class="right">Sum</th></tr></thead><tbody id="summaryRows"></tbody></table>
+      </div>
+      <div class="actions">
+        <button class="primary" id="print">Skriv ut / lagre PDF</button>
+        <button class="secondary" id="export">Eksporter CSV</button>
+      </div>
+      <p class="note">Dette er en lokal prototype. Prosjektet lagres ikke på en server eller deles mellom enheter.</p>
+    </div>
+  </section>
+  <footer>AnleggKalkyle · Prototype 0.1 · Kontroller alltid kalkylegrunnlaget før tilbud sendes.</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let items=[
+ {name:"Maskin",qty:8,unit:"timer",price:1100},
+ {name:"Mannskap",qty:8,unit:"timer",price:650},
+ {name:"Transport",qty:2,unit:"timer",price:950},
+ {name:"Materiell",qty:1,unit:"stk",price:2500}
+];
+const number=id=>Math.max(0,Number($(id).value)||0);
+const money=n=>new Intl.NumberFormat("nb-NO",{style:"currency",currency:"NOK",maximumFractionDigits:0}).format(n);
+const dec=(n,d=2)=>new Intl.NumberFormat("nb-NO",{maximumFractionDigits:d}).format(n);
+function renderLines(){
+ $("lines").innerHTML="";
+ items.forEach((it,i)=>{
+  const div=document.createElement("div");div.className="line";
+  div.innerHTML=`<div class="linehead"><strong>Post ${i+1}</strong><button class="danger" data-remove="${i}">Fjern</button></div>
+  <div class="grid"><div class="field"><label>Beskrivelse</label><input data-i="${i}" data-k="name" value="${esc(it.name)}"></div>
+  <div class="field"><label>Enhet</label><select data-i="${i}" data-k="unit">${["timer","stk","m","m²","m³","tonn","lass","dager"].map(u=>`<option ${it.unit===u?"selected":""}>${u}</option>`).join("")}</select></div>
+  <div class="field"><label>Antall</label><input type="number" min="0" step="0.01" data-i="${i}" data-k="qty" value="${it.qty}"></div>
+  <div class="field"><label>Kostpris per enhet (kr)</label><input type="number" min="0" step="0.01" data-i="${i}" data-k="price" value="${it.price}"></div></div>
+  <p class="note">Sum kostnad: <strong>${money(it.qty*it.price)}</strong></p>`;
+  $("lines").appendChild(div);
+ });
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function calculate(){
+ let cost=items.reduce((s,x)=>s+x.qty*x.price,0);
+ let sell=cost*(1+number("markup")/100),profit=sell-cost,vat=number("vat")/100;
+ $("costTotal").textContent=money(cost);$("sellTotal").textContent=money(sell);$("profitTotal").textContent=money(profit);
+ $("marginInfo").textContent="Fortjenestemargin av salgspris: "+(sell?dec(profit/sell*100):"0")+" %. Påslag og margin er ikke det samme.";
+ $("sProject").textContent=$("project").value||"Ikke angitt";
+ $("sCustomer").textContent=$("customer").value||"Ikke angitt";
+ $("sCost").textContent=money(cost);$("sSell").textContent=money(sell);$("sIncl").textContent=money(sell*(1+vat));
+ $("summaryRows").innerHTML=items.map(x=>`<tr><td>${esc(x.name)}</td><td class="right">${dec(x.qty)} ${esc(x.unit)}</td><td class="right">${money(x.qty*x.price)}</td></tr>`).join("");
+ document.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{items.splice(Number(b.dataset.remove),1);renderLines();calculate();});
+}
+function calculateVA(){
+ let L=number("length"),h=number("depth"),b=number("bottom"),t=number("top");
+ let area=(b+t)/2*h,vol=area*L,drop=L*(Number($("fall").value)||0)/1000;
+ let excavation=vol*number("excPrice"),other=L*number("extra");
+ $("area").textContent=dec(area)+" m²";$("volume").textContent=dec(vol)+" m³";$("drop").textContent=dec(drop)+" m";
+ $("excCost").textContent=money(excavation);$("extraCost").textContent=money(other);$("vaCost").textContent=money(excavation+other);
+}
+$("add").onclick=()=>{items.push({name:"Ny post",qty:1,unit:"stk",price:0});renderLines();calculate();};
+$("lines").addEventListener("input",e=>{const el=e.target;if(el.dataset.i!==undefined){const it=items[Number(el.dataset.i)];it[el.dataset.k]=["qty","price"].includes(el.dataset.k)?Math.max(0,Number(el.value)||0):el.value;calculate();}});
+$("lines").addEventListener("change",e=>{const el=e.target;if(el.dataset.i!==undefined){const it=items[Number(el.dataset.i)];it[el.dataset.k]=["qty","price"].includes(el.dataset.k)?Math.max(0,Number(el.value)||0):el.value;renderLines();calculate();}});
+["markup","vat","project","customer"].forEach(id=>$(id).addEventListener("input",calculate));
+["length","depth","bottom","top","pipe","fall","excPrice","extra"].forEach(id=>$(id).addEventListener("input",calculateVA));
+document.querySelectorAll("[data-tab]").forEach(btn=>btn.onclick=()=>{
+ document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===btn));
+ ["cost","va","summary"].forEach(id=>$(id).classList.toggle("hidden",id!==btn.dataset.tab));
+ if(btn.dataset.tab==="summary")calculate();
+});
+$("addVA").onclick=()=>{
+ const L=number("length"),vol=(number("bottom")+number("top"))/2*number("depth")*L;
+ items.push({name:"VA-grøft – utgraving",qty:vol,unit:"m³",price:number("excPrice")});
+ items.push({name:"VA-grøft – øvrige kostnader",qty:L,unit:"m",price:number("extra")});
+ renderLines();calculate();
+ document.querySelector('[data-tab="cost"]').click();
+};
+$("print").onclick=()=>window.print();
+$("export").onclick=()=>{
+ const rows=[["Beskrivelse","Antall","Enhet","Kostpris","Sum"],...items.map(x=>[x.name,x.qty,x.unit,x.price,x.qty*x.price])];
+ const csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\n");
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));a.download="anleggskalkyle.csv";a.click();URL.revokeObjectURL(a.href);
+};
+renderLines();calculate();calculateVA();
+</script>
+</body>
+</html>
