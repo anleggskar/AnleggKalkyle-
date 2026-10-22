@@ -1,0 +1,2 @@
+# AnleggKalkyle-
+Kalkyleapp for anleggsbransjen
